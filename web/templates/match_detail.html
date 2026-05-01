@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detalhes da Partida · CS Match Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <style>
+    .detail-page { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono); font-size: 0.75rem;
+      color: var(--text-muted); letter-spacing: 0.08em;
+      margin-bottom: 32px; transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--accent-blue); }
+
+    /* ── SEÇÃO GENÉRICA ── */
+    .section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 20px;
+    }
+    .section-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 20px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .section-title {
+      font-family: var(--font-display); font-size: 0.8rem; font-weight: 700;
+      letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted);
+    }
+
+    /* ── HERO ── */
+    .hero-top {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px; background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .match-id-label {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--text-muted); letter-spacing: 0.1em;
+    }
+    .hero-teams {
+      display: flex; align-items: center; justify-content: center;
+      gap: 40px; padding: 48px 32px;
+    }
+    .hero-team {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      flex: 1; max-width: 220px; transition: transform 0.3s;
+    }
+    .hero-team.winner { transform: scale(1.04); }
+    .hero-team.loser  { opacity: 0.5; filter: grayscale(0.5); }
+    .hero-avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, rgba(0,168,255,0.25), rgba(0,168,255,0.06));
+      border: 2px solid var(--border-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 2.2rem; font-weight: 700;
+      color: var(--accent-blue);
+    }
+    .hero-team.winner .hero-avatar {
+      border-color: var(--accent-gold); color: var(--accent-gold);
+      background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05));
+      box-shadow: 0 0 28px rgba(255,215,0,0.3);
+    }
+    .hero-team-name {
+      font-family: var(--font-display); font-size: 1.2rem; font-weight: 700;
+      letter-spacing: 0.06em; text-align: center; color: var(--text-primary);
+    }
+    .hero-team.winner .hero-team-name { color: var(--accent-gold); }
+    .hero-winner-badge {
+      font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em;
+      color: var(--accent-gold); background: rgba(255,215,0,0.1);
+      border: 1px solid rgba(255,215,0,0.35); padding: 4px 12px; border-radius: 4px;
+    }
+    .hero-vs { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+    .hero-vs-text {
+      font-family: var(--font-display); font-size: 1.5rem; font-weight: 700;
+      color: var(--text-dim); letter-spacing: 0.2em;
+    }
+
+    /* ── PLACAR TOTAL DE MAPAS ── */
+    .totals-bar {
+      display: flex; align-items: stretch;
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(0,0,0,0.2);
+    }
+    .total-block {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 18px 12px; gap: 6px;
+      border-right: 1px solid var(--border-subtle);
+    }
+    .total-block:last-child { border-right: none; }
+    .total-team {
+      font-family: var(--font-mono); font-size: 0.6rem;
+      color: var(--text-muted); letter-spacing: 0.08em; text-align: center;
+    }
+    .total-score {
+      font-family: var(--font-display); font-size: 2rem;
+      font-weight: 700; color: var(--text-primary);
+    }
+    .total-block.winner-total .total-score { color: var(--accent-gold); }
+    .total-block.winner-total .total-team  { color: var(--accent-gold); }
+    .total-label {
+      font-family: var(--font-mono); font-size: 0.55rem;
+      color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .total-sep {
+      display: flex; align-items: center; padding: 0 16px;
+      font-family: var(--font-display); font-size: 1rem;
+      color: var(--text-dim); font-weight: 700; flex-shrink: 0;
+    }
+
+    /* ── INFO TABLE ── */
+    .info-table { width: 100%; border-collapse: collapse; }
+    .info-table tr { border-bottom: 1px solid var(--border-subtle); }
+    .info-table tr:last-child { border-bottom: none; }
+    .info-table td { padding: 13px 20px; font-size: 0.85rem; vertical-align: middle; }
+    .info-label {
+      font-family: var(--font-mono); font-size: 0.7rem;
+      color: var(--text-muted); letter-spacing: 0.08em; width: 150px;
+    }
+    .info-value { color: var(--text-primary); }
+    .info-value code {
+      font-family: var(--font-mono); font-size: 0.75rem;
+      background: rgba(0,168,255,0.08); color: var(--accent-cyan);
+      padding: 2px 8px; border-radius: 4px;
+      border: 1px solid rgba(0,168,255,0.15);
+    }
+
+    /* ── MAPAS ── */
+    .maps-list { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .map-card {
+      background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md); padding: 16px 20px;
+      display: flex; align-items: center; gap: 20px;
+    }
+    .map-number {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--text-dim); letter-spacing: 0.1em; flex-shrink: 0; width: 50px;
+    }
+    .map-name-block { flex: 1; }
+    .map-name {
+      font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+      letter-spacing: 0.06em; color: var(--text-primary);
+    }
+    .map-status-label {
+      font-family: var(--font-mono); font-size: 0.6rem;
+      color: var(--text-muted); letter-spacing: 0.08em; margin-top: 2px;
+    }
+    .map-scores { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .map-team-score {
+      display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 80px;
+    }
+    .score-team-name {
+      font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted);
+      letter-spacing: 0.06em; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; max-width: 90px; text-align: center;
+    }
+    .score-value {
+      font-family: var(--font-display); font-size: 1.8rem; font-weight: 700;
+      line-height: 1; color: var(--text-secondary);
+    }
+    .score-value.winner-score { color: var(--accent-green); }
+    .score-value.loser-score  { color: var(--text-dim); }
+    .map-score-sep {
+      font-family: var(--font-display); font-size: 1.2rem;
+      color: var(--text-dim); font-weight: 700;
+    }
+    .map-winner-name {
+      font-family: var(--font-mono); font-size: 0.6rem;
+      color: var(--accent-gold); letter-spacing: 0.08em; text-align: center;
+    }
+
+    /* ── PLAYER STATS ── */
+    .player-team-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 20px; background: rgba(0,168,255,0.04);
+      border-bottom: 1px solid var(--border-subtle);
+      border-top: 1px solid var(--border-subtle);
+    }
+    .player-team-header:first-of-type { border-top: none; }
+    .player-team-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(0,168,255,0.15); border: 1px solid var(--border-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 0.85rem; font-weight: 700;
+      color: var(--accent-blue); flex-shrink: 0;
+    }
+    .player-team-label {
+      font-family: var(--font-display); font-size: 0.9rem; font-weight: 700;
+      letter-spacing: 0.06em; color: var(--text-primary);
+    }
+    .stats-table { width: 100%; border-collapse: collapse; }
+    .stats-table thead tr { border-bottom: 1px solid var(--border-subtle); }
+    .stats-table th {
+      font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted);
+      letter-spacing: 0.1em; text-transform: uppercase; text-align: right;
+      padding: 10px 14px; font-weight: 500;
+    }
+    .stats-table th:first-child { text-align: left; }
+    .stats-table tbody tr {
+      border-bottom: 1px solid rgba(0,168,255,0.04); transition: background 0.15s;
+    }
+    .stats-table tbody tr:last-child { border-bottom: none; }
+    .stats-table tbody tr:hover { background: rgba(0,168,255,0.04); }
+    .stats-table td {
+      padding: 12px 14px; font-size: 0.82rem;
+      color: var(--text-secondary); text-align: right; vertical-align: middle;
+    }
+    .stats-table td:first-child { text-align: left; }
+    .player-name-cell { display: flex; align-items: center; gap: 10px; }
+    .player-mini-avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: rgba(0,168,255,0.1); border: 1px solid var(--border-subtle);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 0.75rem; font-weight: 700;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+    .player-name {
+      font-family: var(--font-display); font-size: 0.9rem; font-weight: 600;
+      letter-spacing: 0.04em; color: var(--text-primary);
+    }
+    .stat-highlight { color: var(--text-primary); font-weight: 500; }
+    .stat-good { color: var(--accent-green); font-weight: 600; }
+    .stat-ok   { color: var(--accent-blue); }
+    .stat-bad  { color: var(--text-dim); }
+    .rating-bar-wrap { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+    .rating-bar { width: 50px; height: 4px; border-radius: 2px; background: var(--bg-surface); overflow: hidden; }
+    .rating-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)); }
+
+    .api-notice {
+      padding: 20px; text-align: center;
+      font-family: var(--font-mono); font-size: 0.75rem;
+      color: var(--text-muted); letter-spacing: 0.06em;
+    }
+
+    @media (max-width: 640px) {
+      .hero-teams { flex-direction: column; gap: 20px; padding: 28px 16px; }
+      .hero-team  { max-width: 100%; }
+      .map-card   { flex-direction: column; gap: 12px; }
+      .map-scores { width: 100%; justify-content: center; }
+      .stats-table th:nth-child(n+7),
+      .stats-table td:nth-child(n+7) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-icon">⬡</span>
+        <div>
+          <h1 class="brand-title">CS Match Tracker</h1>
+          <p class="brand-sub">Counter-Strike 2 · Powered by PandaScore</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="detail-page">
+    <a href="/" class="back-link">← Voltar para a lista</a>
+
+    {% set teams = match.teams %}
+
+    <!-- ════════════════ HERO ════════════════ -->
+    <div class="section hero-section status-{{ match.status }}" style="margin-bottom:20px">
+
+      <div class="hero-top">
+        <span class="match-id-label">PARTIDA #{{ match.id }}</span>
+        {% if match.status == 'running' %}
+          <span class="status-badge live"><span class="pulse-dot small"></span> AO VIVO</span>
+        {% elif match.status == 'finished' %}
+          <span class="status-badge finished">✓ ENCERRADA</span>
+        {% else %}
+          <span class="status-badge upcoming">⏱ PREVISTA</span>
+        {% endif %}
+      </div>
+
+      <div class="hero-teams">
+        {% if teams | length >= 2 %}
+          <div class="hero-team {% if teams[0].is_winner %}winner{% elif match.status == 'finished' %}loser{% endif %}">
+            {% if teams[0].is_winner %}<div style="font-size:1.3rem">👑</div>{% endif %}
+            <div class="hero-avatar">{{ teams[0].team.name[0]|upper }}</div>
+            <span class="hero-team-name">{{ teams[0].team.name }}</span>
+            {% if teams[0].is_winner %}<span class="hero-winner-badge">VENCEDOR</span>{% endif %}
+          </div>
+          <div class="hero-vs"><span class="hero-vs-text">VS</span></div>
+          <div class="hero-team {% if teams[1].is_winner %}winner{% elif match.status == 'finished' %}loser{% endif %}">
+            {% if teams[1].is_winner %}<div style="font-size:1.3rem">👑</div>{% endif %}
+            <div class="hero-avatar">{{ teams[1].team.name[0]|upper }}</div>
+            <span class="hero-team-name">{{ teams[1].team.name }}</span>
+            {% if teams[1].is_winner %}<span class="hero-winner-badge">VENCEDOR</span>{% endif %}
+          </div>
+        {% else %}
+          <p style="color:var(--text-muted);font-style:italic;padding:24px">Times não disponíveis</p>
+        {% endif %}
+      </div>
+
+      <!-- Placar total de mapas ganhos -->
+      {% if teams | length >= 2 and maps %}
+        {% set t0_name = teams[0].team.name %}
+        {% set t1_name = teams[1].team.name %}
+        {% set t0 = namespace(wins=0) %}
+        {% set t1 = namespace(wins=0) %}
+        {% for m in maps %}
+          {% if m.winner_name == t0_name %}{% set t0.wins = t0.wins + 1 %}{% endif %}
+          {% if m.winner_name == t1_name %}{% set t1.wins = t1.wins + 1 %}{% endif %}
+        {% endfor %}
+        <div class="totals-bar">
+          <div class="total-block {% if teams[0].is_winner %}winner-total{% endif %}">
+            <span class="total-team">{{ t0_name }}</span>
+            <span class="total-score">{{ t0.wins }}</span>
+            <span class="total-label">mapas</span>
+          </div>
+          <div class="total-sep">:</div>
+          <div class="total-block {% if teams[1].is_winner %}winner-total{% endif %}">
+            <span class="total-team">{{ t1_name }}</span>
+            <span class="total-score">{{ t1.wins }}</span>
+            <span class="total-label">mapas</span>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- ════════════════ INFORMAÇÕES ════════════════ -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">📋 Informações</span>
+      </div>
+      <table class="info-table">
+        <tr>
+          <td class="info-label">ID</td>
+          <td class="info-value"><code>{{ match.id }}</code></td>
+        </tr>
+        <tr>
+          <td class="info-label">Nome</td>
+          <td class="info-value">{{ match.name or '—' }}</td>
+        </tr>
+        <tr>
+          <td class="info-label">Data / Hora</td>
+          <td class="info-value">
+            {% if match.scheduled_at %}{{ match.scheduled_at.strftime('%d/%m/%Y às %H:%M') }} UTC
+            {% else %}A definir{% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td class="info-label">Vencedor</td>
+          <td class="info-value">
+            {% if match.winner %}
+              <span style="color:var(--accent-gold);font-family:var(--font-display);font-weight:600">
+                👑 {{ match.winner.name }}
+              </span>
+            {% else %}<span style="color:var(--text-muted)">—</span>{% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- ════════════════ MAPAS ════════════════ -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">🗺️ Mapas</span>
+        {% if maps %}
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);margin-left:auto">
+            {{ maps|length }} mapa{% if maps|length != 1 %}s{% endif %}
+          </span>
+        {% endif %}
+      </div>
+
+      {% if not maps %}
+        <div class="api-notice">
+          Nenhum mapa registrado para esta partida.<br>
+          <span style="font-size:0.6rem;color:var(--text-dim)">
+            A PandaScore pode não ter dados de mapas para partidas muito antigas ou ainda não iniciadas.
+          </span>
+        </div>
+      {% else %}
+        <div class="maps-list">
+          {% for map in maps %}
+            <div class="map-card">
+              <div class="map-number">MAPA {{ map.number }}</div>
+
+              <div class="map-name-block">
+                <div class="map-name">{{ map.map_name }}</div>
+                <div class="map-status-label">
+                  {% if map.status == 'finished' %}Encerrado
+                  {% elif map.status == 'running' %}🔴 Ao vivo
+                  {% else %}Não iniciado{% endif %}
+                </div>
+              </div>
+
+              {% if map.team_scores | length >= 2 %}
+                <div class="map-scores">
+                  <div class="map-team-score">
+                    <div class="score-team-name">{{ map.team_scores[0].team_name }}</div>
+                    <div class="score-value {% if map.winner_name == map.team_scores[0].team_name %}winner-score{% elif map.status == 'finished' %}loser-score{% endif %}">
+                      {{ map.team_scores[0].score }}
+                    </div>
+                  </div>
+                  <div class="map-score-sep">:</div>
+                  <div class="map-team-score">
+                    <div class="score-team-name">{{ map.team_scores[1].team_name }}</div>
+                    <div class="score-value {% if map.winner_name == map.team_scores[1].team_name %}winner-score{% elif map.status == 'finished' %}loser-score{% endif %}">
+                      {{ map.team_scores[1].score }}
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
+
+              {% if map.winner_name %}
+                <div style="text-align:center;flex-shrink:0;min-width:80px">
+                  <div class="map-winner-name">👑 {{ map.winner_name }}</div>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- ════════════════ STATS DOS JOGADORES ════════════════ -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">📊 Estatísticas dos Jogadores</span>
+        {% if players_by_team %}
+          <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);margin-left:auto">
+            {{ players_by_team.values()|sum(attribute='__len__') }} jogadores
+          </span>
+        {% endif %}
+      </div>
+
+      {% if not players_by_team %}
+        <div class="api-notice">
+          Estatísticas de jogadores não disponíveis para esta partida.<br>
+          <span style="font-size:0.6rem;color:var(--text-dim)">
+            Disponível apenas para partidas com <code style="font-size:0.6rem">detailed_stats: true</code> na API PandaScore.
+          </span>
+        </div>
+      {% else %}
+        {% for team_name, players in players_by_team.items() %}
+          <div class="player-team-header">
+            <div class="player-team-avatar">{{ team_name[0]|upper }}</div>
+            <span class="player-team-label">{{ team_name }}</span>
+          </div>
+
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Jogador</th>
+                <th>K</th>
+                <th>D</th>
+                <th>A</th>
+                <th>K/D</th>
+                <th>HS%</th>
+                <th>ADR</th>
+                <th>Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in players %}
+                {% set kd = p.kd_ratio %}
+                <tr>
+                  <td>
+                    <div class="player-name-cell">
+                      <div class="player-mini-avatar">{{ p.name[0]|upper }}</div>
+                      <span class="player-name">{{ p.name }}</span>
+                    </div>
+                  </td>
+                  <td class="stat-highlight">{{ p.kills }}</td>
+                  <td class="{% if p.deaths > p.kills %}stat-bad{% else %}stat-ok{% endif %}">{{ p.deaths }}</td>
+                  <td>{{ p.assists }}</td>
+                  <td class="{% if kd >= 1.3 %}stat-good{% elif kd >= 0.9 %}stat-ok{% else %}stat-bad{% endif %}">
+                    {{ '%.2f' | format(kd) }}
+                  </td>
+                  <td class="{% if p.headshot_pct >= 50 %}stat-good{% elif p.headshot_pct >= 30 %}stat-ok{% else %}stat-bad{% endif %}">
+                    {% if p.headshot_pct %}{{ '%.0f' | format(p.headshot_pct) }}%{% else %}—{% endif %}
+                  </td>
+                  <td class="{% if p.adr >= 80 %}stat-good{% elif p.adr >= 60 %}stat-ok{% else %}stat-bad{% endif %}">
+                    {% if p.adr %}{{ '%.1f' | format(p.adr) }}{% else %}—{% endif %}
+                  </td>
+                  <td>
+                    {% if p.rating %}
+                      <div class="rating-bar-wrap">
+                        <span class="{% if p.rating >= 1.2 %}stat-good{% elif p.rating >= 0.9 %}stat-ok{% else %}stat-bad{% endif %}">
+                          {{ '%.2f' | format(p.rating) }}
+                        </span>
+                        <div class="rating-bar">
+                          <div class="rating-bar-fill" data-width="{{ [p.rating / 2.0 * 100, 100]|min }}"></div>
+                        </div>
+                      </div>
+                    {% else %}—{% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endfor %}
+
+        <div style="padding:12px 20px;border-top:1px solid var(--border-subtle)">
+          <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim)">
+            K = Kills &nbsp;·&nbsp; D = Deaths &nbsp;·&nbsp; A = Assists &nbsp;·&nbsp;
+            K/D = Kill/Death Ratio &nbsp;·&nbsp; HS% = Headshot % &nbsp;·&nbsp;
+            ADR = Avg Damage per Round &nbsp;·&nbsp; Rating = Performance Rating
+          </span>
+        </div>
+      {% endif %}
+    </div>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>CS Match Tracker &copy; 2024 · Dados via <a href="https://pandascore.co" target="_blank">PandaScore API</a></p>
+  </footer>
+
+</body>
+</html>

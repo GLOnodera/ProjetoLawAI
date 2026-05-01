@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CS Match Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════════ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-icon">⬡</span>
+        <div>
+          <h1 class="brand-title">CS Match Tracker</h1>
+          <p class="brand-sub">Counter-Strike 2 · Powered by PandaScore</p>
+        </div>
+      </div>
+
+      <div class="header-stats">
+        <div class="stat-pill stat-live">
+          <span class="pulse-dot"></span>
+          <span>{{ stats.live }} AO VIVO</span>
+        </div>
+        <div class="stat-pill stat-upcoming">
+          <span>{{ stats.upcoming }} PREVISTAS</span>
+        </div>
+        <div class="stat-pill stat-finished">
+          <span>{{ stats.finished }} CONCLUÍDAS</span>
+        </div>
+        <div class="stat-pill stat-total">
+          <span>{{ stats.total }} TOTAL</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════
+       FILTROS
+  ══════════════════════════════════════════ -->
+  <nav class="filter-bar">
+    <div class="filter-inner">
+      {% if team_filter is defined and team_filter %}
+        <div class="team-filter-badge">
+          <span class="filter-label">🎯 Filtrando por:</span>
+          <strong>{{ team_filter.name }}</strong>
+          <a href="/" class="clear-filter">✕ limpar</a>
+        </div>
+      {% else %}
+        <a href="/" class="filter-btn {% if not status_filter %}active{% endif %}">
+          Todas
+        </a>
+        <a href="/?status=running" class="filter-btn {% if status_filter == 'running' %}active live{% endif %}">
+          <span class="mini-pulse"></span> Ao Vivo
+        </a>
+        <a href="/?status=not_started" class="filter-btn {% if status_filter == 'not_started' %}active{% endif %}">
+          Previstas
+        </a>
+        <a href="/?status=finished" class="filter-btn {% if status_filter == 'finished' %}active{% endif %}">
+          Concluídas
+        </a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════
+       CONTEÚDO PRINCIPAL
+  ══════════════════════════════════════════ -->
+  <main class="main-content">
+
+    {% if error is defined and error %}
+      <div class="empty-state">
+        <div class="empty-icon">⚠</div>
+        <p>{{ error }}</p>
+        <a href="/" class="cta-link">← Voltar para o início</a>
+      </div>
+
+    {% elif not matches %}
+      <div class="empty-state">
+        <div class="empty-icon">📡</div>
+        <p class="empty-title">Nenhuma partida encontrada</p>
+        <p class="empty-hint">Execute <code>python seed.py</code> para importar os dados da API.</p>
+        <a href="/" class="cta-link">Recarregar</a>
+      </div>
+
+    {% else %}
+      <div class="matches-grid">
+        {% for match in matches %}
+          {% set teams = match.teams %}
+
+          <article class="match-card status-{{ match.status }}">
+
+            <!-- Faixa de status no topo do card -->
+            <div class="card-status-bar">
+              {% if match.status == 'running' %}
+                <span class="status-badge live"><span class="pulse-dot small"></span> AO VIVO</span>
+              {% elif match.status == 'finished' %}
+                <span class="status-badge finished">✓ ENCERRADA</span>
+              {% else %}
+                <span class="status-badge upcoming">⏱ PREVISTA</span>
+              {% endif %}
+
+              {% if match.scheduled_at %}
+                <span class="match-date">
+                  {{ match.scheduled_at.strftime('%d/%m/%Y %H:%M') }}
+                </span>
+              {% endif %}
+            </div>
+
+            <!-- Conteúdo principal: time vs time -->
+            <div class="match-body">
+              {% if teams | length >= 2 %}
+                <!-- Time A -->
+                <div class="team-block {% if teams[0].is_winner %}winner{% endif %}">
+                  {% if teams[0].is_winner %}
+                    <div class="winner-crown">👑</div>
+                  {% endif %}
+                  <div class="team-avatar">
+                    {{ teams[0].team.name[0] | upper }}
+                  </div>
+                  <span class="team-name">{{ teams[0].team.name }}</span>
+                  {% if teams[0].is_winner %}
+                    <span class="winner-tag">VENCEDOR</span>
+                  {% endif %}
+                </div>
+
+                <!-- VS separador -->
+                <div class="vs-divider">
+                  <div class="vs-line"></div>
+                  <span class="vs-text">VS</span>
+                  <div class="vs-line"></div>
+                </div>
+
+                <!-- Time B -->
+                <div class="team-block {% if teams[1].is_winner %}winner{% endif %}">
+                  {% if teams[1].is_winner %}
+                    <div class="winner-crown">👑</div>
+                  {% endif %}
+                  <div class="team-avatar">
+                    {{ teams[1].team.name[0] | upper }}
+                  </div>
+                  <span class="team-name">{{ teams[1].team.name }}</span>
+                  {% if teams[1].is_winner %}
+                    <span class="winner-tag">VENCEDOR</span>
+                  {% endif %}
+                </div>
+
+              {% elif teams | length == 1 %}
+                <!-- Apenas um time confirmado -->
+                <div class="team-block">
+                  <div class="team-avatar">{{ teams[0].team.name[0] | upper }}</div>
+                  <span class="team-name">{{ teams[0].team.name }}</span>
+                </div>
+                <div class="vs-divider">
+                  <div class="vs-line"></div>
+                  <span class="vs-text">VS</span>
+                  <div class="vs-line"></div>
+                </div>
+                <div class="team-block tbd">
+                  <div class="team-avatar tbd-avatar">?</div>
+                  <span class="team-name">A definir</span>
+                </div>
+
+              {% else %}
+                <!-- Nenhum time registrado -->
+                <div class="match-tbd-full">
+                  <p>Times a definir</p>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Rodapé do card: link para filtrar por time + ver detalhes -->
+            {% if teams | length >= 1 %}
+            <div class="card-footer">
+              {% for entry in teams %}
+                <a href="/team/{{ entry.team.slug }}" class="team-filter-link">
+                  {{ entry.team.name }}
+                </a>
+                {% if not loop.last %}<span class="footer-sep">·</span>{% endif %}
+              {% endfor %}
+              <span class="footer-sep footer-sep-right">·</span>
+              <a href="/match/{{ match.id }}" class="detail-link">Ver detalhes →</a>
+            </div>
+            {% endif %}
+
+          </article>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+  </main>
+
+  <!-- ══════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════ -->
+  <footer class="site-footer">
+    <p>CS Match Tracker &copy; 2024 · Dados via <a href="https://pandascore.co" target="_blank">PandaScore API</a></p>
+  </footer>
+
+</body>
+</html>
